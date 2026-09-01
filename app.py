@@ -7,9 +7,10 @@ from flask import (
     redirect,
     render_template,
     request,
+    session,
     url_for,
 )
-from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from database.db import get_db, init_db, seed_db
 
@@ -28,6 +29,9 @@ def landing():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    if session.get("user_id"):
+        return redirect(url_for("landing"))
+
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip().lower()
@@ -68,9 +72,65 @@ def register():
     return render_template("register.html")
 
 
-@app.route("/login")
+@app.route("/login", methods=["GET", "POST"])
 def login():
+    if session.get("user_id"):
+        return redirect(url_for("landing"))
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        if not email or not password:
+            return render_template(
+                "login.html",
+                error="Please enter your email and password.",
+                email=email,
+            )
+
+        conn = get_db()
+        try:
+            row = conn.execute(
+                "SELECT id, password_hash FROM users WHERE email = ?", (email,)
+            ).fetchone()
+        finally:
+            conn.close()
+
+        if row is None or not check_password_hash(row["password_hash"], password):
+            return render_template(
+                "login.html",
+                error="Incorrect email or password.",
+                email=email,
+            )
+
+        session["user_id"] = row["id"]
+        flash("Signed in.")
+        return redirect(url_for("landing"))
+
     return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.pop("user_id", None)
+    flash("You have been logged out.")
+    return redirect(url_for("login"))
+
+
+@app.context_processor
+def inject_current_user():
+    user_id = session.get("user_id")
+    if user_id is None:
+        return {"current_user": None}
+
+    conn = get_db()
+    try:
+        user = conn.execute(
+            "SELECT id, name, email FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+    return {"current_user": user}
 
 
 @app.route("/terms")
@@ -86,11 +146,6 @@ def privacy():
 # ------------------------------------------------------------------ #
 # Placeholder routes — students will implement these                  #
 # ------------------------------------------------------------------ #
-
-@app.route("/logout")
-def logout():
-    return "Logout — coming in Step 3"
-
 
 @app.route("/profile")
 def profile():
