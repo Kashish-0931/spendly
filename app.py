@@ -13,6 +13,12 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database.db import get_db, init_db, seed_db
+from database.queries import (
+    get_category_breakdown,
+    get_recent_transactions,
+    get_summary_stats,
+    get_user_by_id,
+)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-insecure-change-me")
@@ -135,40 +141,23 @@ def inject_current_user():
 
 @app.route("/profile")
 def profile():
-    if not session.get("user_id"):
+    user_id = session.get("user_id")
+    if not user_id:
         flash("Please sign in to view your profile.")
         return redirect(url_for("login"))
 
-    member_since = "March 2025"  # hardcoded — Step 5 replaces with users.created_at
-
-    summary = {
-        "total_spent": 8188,
-        "transaction_count": 5,
-        "top_category": "Food",
-    }
-
-    transactions = [
-        {"date": "2026-08-28", "description": "Groceries from the local kirana store", "category": "Food", "amount": 480},
-        {"date": "2026-08-25", "description": "Auto rickshaw to office", "category": "Transport", "amount": 60},
-        {"date": "2026-08-22", "description": "Electricity bill for the month", "category": "Bills", "amount": 1250},
-        {"date": "2026-08-18", "description": "New pair of running shoes", "category": "Shopping", "amount": 1899},
-        {"date": "2026-08-14", "description": "OTT subscription renewal", "category": "Entertainment", "amount": 299},
-    ]
-
-    categories = [
-        {"name": "Food", "amount": 4200, "percent": 70},
-        {"name": "Shopping", "amount": 1899, "percent": 40},
-        {"name": "Bills", "amount": 1250, "percent": 30},
-        {"name": "Transport", "amount": 600, "percent": 15},
-        {"name": "Entertainment", "amount": 299, "percent": 10},
-    ]
+    user = get_user_by_id(user_id)
+    if user is None:
+        session.pop("user_id", None)
+        flash("Please sign in to view your profile.")
+        return redirect(url_for("login"))
 
     return render_template(
         "profile.html",
-        member_since=member_since,
-        summary=summary,
-        transactions=transactions,
-        categories=categories,
+        member_since=user["member_since"],
+        summary=get_summary_stats(user_id),
+        transactions=get_recent_transactions(user_id),
+        categories=get_category_breakdown(user_id),
     )
 
 

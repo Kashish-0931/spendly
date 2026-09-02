@@ -20,7 +20,7 @@
         <div class="mock-tiles">
             <div class="mock-tile">
                 <span class="mock-tile-label">Total spent</span>
-                <span class="mock-tile-value">₹{{ "{:,}".format(summary.total_spent) }}</span>
+                <span class="mock-tile-value">₹{{ "{:,.2f}".format(summary.total_spent) }}</span>
             </div>
             <div class="mock-tile">
                 <span class="mock-tile-label">Transactions</span>
@@ -49,7 +49,7 @@
                         <td>{{ tx.date }}</td>
                         <td>{{ tx.description }}</td>
                         <td><span class="cat-badge cat-badge--{{ tx.category|lower }}">{{ tx.category }}</span></td>
-                        <td class="profile-amount">₹{{ "{:,}".format(tx.amount) }}</td>
+                        <td class="profile-amount">₹{{ "{:,.2f}".format(tx.amount) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -62,9 +62,9 @@
             <div class="cat-row">
                 <span class="mock-cat">{{ cat.name }}</span>
                 <div class="mock-bar-track">
-                    <div class="cat-meter-fill cat-meter-fill--{{ cat.name|lower }} w-{{ cat.percent }}"></div>
+                    <div class="cat-meter-fill cat-meter-fill--{{ cat.name|lower }} w-{{ cat.width }}"></div>
                 </div>
-                <span class="profile-amount">₹{{ "{:,}".format(cat.amount) }}</span>
+                <span class="profile-amount">₹{{ "{:,.2f}".format(cat.amount) }}</span>
             </div>
             {% endfor %}
         </div>
