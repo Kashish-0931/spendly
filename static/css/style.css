@@ -111,7 +111,8 @@ a { color: inherit; text-decoration: none; }
 .nav-links a { color: var(--ink-muted); transition: color 0.2s; }
 .nav-links a:hover { color: var(--ink); }
 
-.nav-user { color: var(--ink); font-weight: 600; }
+.nav-links a.nav-user { color: var(--ink); font-weight: 600; }
+.nav-links a.nav-user:hover { color: var(--accent); }
 
 .nav-cta {
     background: var(--ink) !important;
@@ -861,7 +862,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (max-width: 600px) {
-    .nav-links a:not(.nav-cta) { display: none; }
+    .nav-links a:not(.nav-cta):not(.nav-user) { display: none; }
     .hero { padding: 3rem 1rem 2rem; }
     .legal-page { padding: 3rem 1.25rem 4rem; }
     .profile-section { padding: 2rem 1.25rem 3rem; }
