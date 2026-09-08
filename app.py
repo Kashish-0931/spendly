@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from datetime import date, datetime
 
 from flask import (
     Flask,
@@ -13,7 +14,7 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database.date_range import resolve_range
-from database.db import get_db, init_db, seed_db
+from database.db import CATEGORIES, get_db, init_db, seed_db
 from database.queries import (
     get_category_breakdown,
     get_recent_transactions,
@@ -192,13 +193,95 @@ def privacy():
 
 
 # ------------------------------------------------------------------ #
-# Placeholder routes — students will implement these                  #
+# Expenses                                                            #
 # ------------------------------------------------------------------ #
 
-@app.route("/expenses/add")
-def add_expense():
-    return "Add expense — coming in Step 7"
+MAX_AMOUNT = 10_000_000  # ₹1 crore sanity cap
+MAX_DESCRIPTION = 200
 
+
+@app.route("/expenses/add", methods=["GET", "POST"])
+def add_expense():
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Please sign in to add an expense.")
+        return redirect(url_for("login"))
+
+    if get_user_by_id(user_id) is None:
+        session.pop("user_id", None)
+        flash("Please sign in to add an expense.")
+        return redirect(url_for("login"))
+
+    today = date.today().isoformat()
+
+    if request.method == "POST":
+        form = {
+            "amount": request.form.get("amount", "").strip(),
+            "category": request.form.get("category", "").strip(),
+            "date": request.form.get("date", "").strip(),
+            "description": request.form.get("description", "").strip(),
+        }
+
+        error = None
+        try:
+            amount = round(float(form["amount"]), 2)
+        except (TypeError, ValueError):
+            amount = None
+
+        if amount is None or amount != amount or amount in (float("inf"), float("-inf")):
+            error = "Enter a valid amount."
+        elif amount <= 0:
+            error = "Amount must be greater than zero."
+        elif amount >= MAX_AMOUNT:
+            error = "That amount looks too large."
+        elif form["category"] not in CATEGORIES:
+            error = "Choose a category from the list."
+        elif len(form["description"]) > MAX_DESCRIPTION:
+            error = f"Description must be {MAX_DESCRIPTION} characters or fewer."
+        else:
+            try:
+                parsed_date = datetime.strptime(form["date"], "%Y-%m-%d").date()
+            except ValueError:
+                error = "Enter a valid date."
+            else:
+                if parsed_date > date.today():
+                    error = "The date cannot be in the future."
+
+        if error:
+            return render_template(
+                "add_expense.html",
+                error=error,
+                categories=CATEGORIES,
+                today=today,
+                form=form,
+            )
+
+        description = form["description"] or None
+        conn = get_db()
+        try:
+            with conn:
+                conn.execute(
+                    "INSERT INTO expenses (user_id, amount, category, date, description) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (user_id, amount, form["category"], parsed_date.isoformat(), description),
+                )
+        finally:
+            conn.close()
+
+        flash("Expense added.")
+        return redirect(url_for("profile"))
+
+    return render_template(
+        "add_expense.html",
+        categories=CATEGORIES,
+        today=today,
+        form={"date": today},
+    )
+
+
+# ------------------------------------------------------------------ #
+# Placeholder routes — students will implement these                  #
+# ------------------------------------------------------------------ #
 
 @app.route("/expenses/<int:id>/edit")
 def edit_expense(id):
