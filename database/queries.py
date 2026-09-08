@@ -92,13 +92,13 @@ def get_recent_transactions(user_id, limit=10, start=None, end=None):
     """Return the user's ``limit`` most recent expenses, newest first.
 
     ``start`` / ``end`` are optional inclusive ``YYYY-MM-DD`` bounds. Each item
-    is ``{"date", "description", "category", "amount"}``. No rows -> ``[]``.
+    is ``{"id", "date", "description", "category", "amount"}``. No rows -> ``[]``.
     """
     date_sql, date_params = _date_clause(start, end)
     conn = get_db()
     try:
         rows = conn.execute(
-            "SELECT date, description, category, amount FROM expenses "
+            "SELECT id, date, description, category, amount FROM expenses "
             f"WHERE user_id = ?{date_sql} "
             "ORDER BY date DESC, id DESC LIMIT ?",
             (user_id, *date_params, limit),
