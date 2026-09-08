@@ -12,6 +12,7 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from database.date_range import resolve_range
 from database.db import get_db, init_db, seed_db
 from database.queries import (
     get_category_breakdown,
@@ -152,12 +153,22 @@ def profile():
         flash("Please sign in to view your profile.")
         return redirect(url_for("login"))
 
+    start, end, range_label = resolve_range(
+        request.args.get("start"),
+        request.args.get("end"),
+        request.args.get("range"),
+    )
+
     return render_template(
         "profile.html",
         member_since=user["member_since"],
-        summary=get_summary_stats(user_id),
-        transactions=get_recent_transactions(user_id),
-        categories=get_category_breakdown(user_id),
+        summary=get_summary_stats(user_id, start=start, end=end),
+        transactions=get_recent_transactions(user_id, start=start, end=end),
+        categories=get_category_breakdown(user_id, start=start, end=end),
+        filter_start=start,
+        filter_end=end,
+        range_label=range_label,
+        filter_active=bool(start or end),
     )
 
 

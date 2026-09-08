@@ -696,12 +696,21 @@ a { color: inherit; text-decoration: none; }
 .profile-section { padding: 3rem 2rem 4rem; }
 
 .profile-container {
-    max-width: 840px;
+    max-width: 960px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
 }
+
+.profile-panels {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.profile-panels .mock-panel { min-width: 0; }
 
 .profile-card {
     display: flex;
@@ -765,12 +774,12 @@ a { color: inherit; text-decoration: none; }
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--ink-faint);
-    padding: 0 0 0.6rem;
+    padding: 0 1rem 0.6rem 0;
     border-bottom: 1px solid var(--border-soft);
 }
 
 .profile-table td {
-    padding: 0.75rem 0;
+    padding: 0.75rem 1rem 0.75rem 0;
     border-bottom: 1px solid var(--border-soft);
     font-size: 0.9rem;
     color: var(--ink-soft);
@@ -780,7 +789,15 @@ a { color: inherit; text-decoration: none; }
 .profile-table tr:hover td { background: var(--paper-warm); }
 
 .profile-table th:last-child,
-.profile-table td:last-child { text-align: right; }
+.profile-table td:last-child {
+    padding-right: 0;
+    text-align: right;
+}
+
+.profile-table td:first-child { color: var(--ink-muted); }
+
+.profile-table td:first-child,
+.profile-table td:last-child { white-space: nowrap; }
 
 .profile-amount {
     font-variant-numeric: tabular-nums;
@@ -808,22 +825,45 @@ a { color: inherit; text-decoration: none; }
     background: currentColor;
 }
 
-.cat-badge--food::before { background: var(--cat-food); }
-.cat-badge--transport::before { background: var(--cat-transport); }
-.cat-badge--bills::before { background: var(--cat-bills); }
-.cat-badge--health::before { background: var(--cat-health); }
-.cat-badge--entertainment::before { background: var(--cat-entertainment); }
-.cat-badge--shopping::before { background: var(--cat-shopping); }
-.cat-badge--other::before { background: var(--cat-other); }
-
 .cat-row {
-    display: grid;
-    grid-template-columns: 110px 1fr 80px;
-    align-items: center;
-    gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
-.cat-row + .cat-row { margin-top: 0.9rem; }
+.cat-row + .cat-row { margin-top: 1.1rem; }
+
+.cat-row-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+}
+
+.cat-name {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+}
+
+.cat-dot {
+    align-self: center;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--ink-faint);
+}
+
+.cat-pct {
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-faint);
+}
+
+.cat-row .mock-bar-track { height: 10px; }
 
 .cat-meter-fill {
     height: 100%;
@@ -831,12 +871,34 @@ a { color: inherit; text-decoration: none; }
     transition: width 0.6s ease;
 }
 
+/* One colour per category, shared by the badge dot, the breakdown dot,
+   and the meter-bar fill. Add a new category here in one place. */
+.cat-badge--food::before,
+.cat-dot--food,
 .cat-meter-fill--food { background: var(--cat-food); }
+
+.cat-badge--transport::before,
+.cat-dot--transport,
 .cat-meter-fill--transport { background: var(--cat-transport); }
+
+.cat-badge--bills::before,
+.cat-dot--bills,
 .cat-meter-fill--bills { background: var(--cat-bills); }
+
+.cat-badge--health::before,
+.cat-dot--health,
 .cat-meter-fill--health { background: var(--cat-health); }
+
+.cat-badge--entertainment::before,
+.cat-dot--entertainment,
 .cat-meter-fill--entertainment { background: var(--cat-entertainment); }
+
+.cat-badge--shopping::before,
+.cat-dot--shopping,
 .cat-meter-fill--shopping { background: var(--cat-shopping); }
+
+.cat-badge--other::before,
+.cat-dot--other,
 .cat-meter-fill--other { background: var(--cat-other); }
 
 .w-10 { width: 10%; }
@@ -850,6 +912,66 @@ a { color: inherit; text-decoration: none; }
 .w-90 { width: 90%; }
 .w-100 { width: 100%; }
 
+/* Profile date filter */
+.profile-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+}
+
+.profile-filter-fields {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+}
+
+.profile-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+}
+
+.profile-filter-field .form-input {
+    width: auto;
+    font-size: 0.85rem;
+}
+
+.profile-filter-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    font-size: 0.85rem;
+}
+
+.profile-filter-presets a { color: var(--ink-muted); transition: color 0.2s; }
+.profile-filter-presets a:hover { color: var(--accent); }
+
+.profile-filter-label {
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+    margin: 0;
+}
+
+.profile-filter-label a { color: var(--accent); }
+
+.profile-empty {
+    color: var(--ink-muted);
+    font-size: 0.9rem;
+    padding: 0.75rem 0;
+    margin: 0;
+}
+
 /* ------------------------------------------------------------------ */
 /* Responsive                                                          */
 /* ------------------------------------------------------------------ */
@@ -861,13 +983,51 @@ a { color: inherit; text-decoration: none; }
     .features-inner { grid-template-columns: 1fr; }
 }
 
+/* Tight column: collapse the transaction table into stacked cards so the two
+   panels can stay side by side down to phone width. */
+@media (max-width: 960px) {
+    .profile-panels .profile-table,
+    .profile-panels .profile-table tbody,
+    .profile-panels .profile-table tr,
+    .profile-panels .profile-table td { display: block; }
+
+    .profile-panels .profile-table thead { display: none; }
+
+    .profile-panels .profile-table tr {
+        padding: 0.7rem 0;
+        border-bottom: 1px solid var(--border-soft);
+    }
+    .profile-panels .profile-table tr:last-child { border-bottom: none; }
+    .profile-panels .profile-table tr:hover td { background: none; }
+
+    .profile-panels .profile-table td {
+        padding: 0;
+        border: none;
+        white-space: normal;
+    }
+    .profile-panels .profile-table td:first-child {
+        font-size: 0.75rem;
+        color: var(--ink-faint);
+    }
+    .profile-panels .profile-table td:nth-child(2) {
+        font-size: 0.9rem;
+        color: var(--ink-soft);
+        margin: 0.15rem 0;
+    }
+    .profile-panels .profile-table td:last-child {
+        margin-top: 0.3rem;
+        text-align: left;
+    }
+}
+
 @media (max-width: 600px) {
     .nav-links a:not(.nav-cta):not(.nav-user) { display: none; }
     .hero { padding: 3rem 1rem 2rem; }
     .legal-page { padding: 3rem 1.25rem 4rem; }
     .profile-section { padding: 2rem 1.25rem 3rem; }
     .profile-card { flex-direction: column; text-align: center; }
-    .cat-row { grid-template-columns: 1fr; gap: 0.35rem; }
-    .cat-row .profile-amount { text-align: left; }
+    .profile-panels { grid-template-columns: 1fr; }
+    .profile-filter { flex-direction: column; align-items: stretch; }
+    .profile-filter-fields { flex-wrap: wrap; }
     .profile-table { display: block; overflow-x: auto; }
 }
