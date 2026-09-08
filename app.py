@@ -4,6 +4,7 @@ from datetime import date, datetime
 
 from flask import (
     Flask,
+    abort,
     flash,
     redirect,
     render_template,
@@ -200,6 +201,46 @@ MAX_AMOUNT = 10_000_000  # ₹1 crore sanity cap
 MAX_DESCRIPTION = 200
 
 
+def _validate_expense_form(form):
+    """Validate a submitted expense form dict (``amount``/``category``/``date``/
+    ``description``, all pre-stripped strings).
+
+    Returns ``(fields, error)``. On success ``error`` is ``None`` and ``fields``
+    is a dict normalised for storage: ``amount`` rounded to 2 decimals,
+    ``date`` as a ``YYYY-MM-DD`` string, ``description`` ``None`` when blank.
+    On failure ``fields`` is ``None`` and ``error`` is a friendly message.
+    """
+    try:
+        amount = round(float(form["amount"]), 2)
+    except (TypeError, ValueError):
+        amount = None
+
+    if amount is None or amount != amount or amount in (float("inf"), float("-inf")):
+        return None, "Enter a valid amount."
+    if amount <= 0:
+        return None, "Amount must be greater than zero."
+    if amount >= MAX_AMOUNT:
+        return None, "That amount looks too large."
+    if form["category"] not in CATEGORIES:
+        return None, "Choose a category from the list."
+    if len(form["description"]) > MAX_DESCRIPTION:
+        return None, f"Description must be {MAX_DESCRIPTION} characters or fewer."
+
+    try:
+        parsed_date = datetime.strptime(form["date"], "%Y-%m-%d").date()
+    except ValueError:
+        return None, "Enter a valid date."
+    if parsed_date > date.today():
+        return None, "The date cannot be in the future."
+
+    return {
+        "amount": amount,
+        "category": form["category"],
+        "date": parsed_date.isoformat(),
+        "description": form["description"] or None,
+    }, None
+
+
 @app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
     user_id = session.get("user_id")
@@ -222,31 +263,7 @@ def add_expense():
             "description": request.form.get("description", "").strip(),
         }
 
-        error = None
-        try:
-            amount = round(float(form["amount"]), 2)
-        except (TypeError, ValueError):
-            amount = None
-
-        if amount is None or amount != amount or amount in (float("inf"), float("-inf")):
-            error = "Enter a valid amount."
-        elif amount <= 0:
-            error = "Amount must be greater than zero."
-        elif amount >= MAX_AMOUNT:
-            error = "That amount looks too large."
-        elif form["category"] not in CATEGORIES:
-            error = "Choose a category from the list."
-        elif len(form["description"]) > MAX_DESCRIPTION:
-            error = f"Description must be {MAX_DESCRIPTION} characters or fewer."
-        else:
-            try:
-                parsed_date = datetime.strptime(form["date"], "%Y-%m-%d").date()
-            except ValueError:
-                error = "Enter a valid date."
-            else:
-                if parsed_date > date.today():
-                    error = "The date cannot be in the future."
-
+        fields, error = _validate_expense_form(form)
         if error:
             return render_template(
                 "add_expense.html",
@@ -256,14 +273,19 @@ def add_expense():
                 form=form,
             )
 
-        description = form["description"] or None
         conn = get_db()
         try:
             with conn:
                 conn.execute(
                     "INSERT INTO expenses (user_id, amount, category, date, description) "
                     "VALUES (?, ?, ?, ?, ?)",
-                    (user_id, amount, form["category"], parsed_date.isoformat(), description),
+                    (
+                        user_id,
+                        fields["amount"],
+                        fields["category"],
+                        fields["date"],
+                        fields["description"],
+                    ),
                 )
         finally:
             conn.close()
@@ -279,13 +301,91 @@ def add_expense():
     )
 
 
+@app.route("/expenses/<int:id>/edit", methods=["GET", "POST"])
+def edit_expense(id):
+    user_id = session.get("user_id")
+    if not user_id:
+        flash("Please sign in to edit an expense.")
+        return redirect(url_for("login"))
+
+    if get_user_by_id(user_id) is None:
+        session.pop("user_id", None)
+        flash("Please sign in to edit an expense.")
+        return redirect(url_for("login"))
+
+    today = date.today().isoformat()
+
+    conn = get_db()
+    try:
+        expense = conn.execute(
+            "SELECT id, amount, category, date, description FROM expenses "
+            "WHERE id = ? AND user_id = ?",
+            (id, user_id),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if expense is None:
+        abort(404)
+
+    if request.method == "POST":
+        form = {
+            "amount": request.form.get("amount", "").strip(),
+            "category": request.form.get("category", "").strip(),
+            "date": request.form.get("date", "").strip(),
+            "description": request.form.get("description", "").strip(),
+        }
+
+        fields, error = _validate_expense_form(form)
+        if error:
+            return render_template(
+                "edit_expense.html",
+                error=error,
+                expense=expense,
+                categories=CATEGORIES,
+                today=today,
+                form=form,
+            )
+
+        conn = get_db()
+        try:
+            with conn:
+                conn.execute(
+                    "UPDATE expenses SET amount = ?, category = ?, date = ?, description = ? "
+                    "WHERE id = ? AND user_id = ?",
+                    (
+                        fields["amount"],
+                        fields["category"],
+                        fields["date"],
+                        fields["description"],
+                        id,
+                        user_id,
+                    ),
+                )
+        finally:
+            conn.close()
+
+        flash("Expense updated.")
+        return redirect(url_for("profile"))
+
+    form = {
+        "amount": f"{expense['amount']:.2f}",
+        "category": expense["category"],
+        "date": expense["date"],
+        "description": expense["description"] or "",
+    }
+    return render_template(
+        "edit_expense.html",
+        expense=expense,
+        categories=CATEGORIES,
+        today=today,
+        form=form,
+    )
+
+
 # ------------------------------------------------------------------ #
 # Placeholder routes — students will implement these                  #
 # ------------------------------------------------------------------ #
-
-@app.route("/expenses/<int:id>/edit")
-def edit_expense(id):
-    return "Edit expense — coming in Step 8"
 
 
 @app.route("/expenses/<int:id>/delete")
