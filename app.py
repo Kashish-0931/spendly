@@ -172,6 +172,15 @@ def profile():
     )
 
 
+@app.route("/analytics")
+def analytics():
+    if not session.get("user_id"):
+        flash("Please sign in to view analytics.")
+        return redirect(url_for("login"))
+
+    return render_template("analytics.html")
+
+
 @app.route("/terms")
 def terms():
     return render_template("terms.html")
