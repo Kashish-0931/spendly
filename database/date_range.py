@@ -1,3 +1,4 @@
+
 """Resolve profile-page date-filter input into a concrete window.
 
 Pure standard-library helper (no Flask imports). Turns the loose ``start`` /
