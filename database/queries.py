@@ -11,6 +11,22 @@ from datetime import datetime
 from database.db import get_db
 
 
+def _date_clause(start, end):
+    """Build an ``AND date >= ? AND date <= ?`` fragment for the bounds given.
+
+    Either bound may be ``None`` (open). Returns ``(sql_fragment, params)`` where
+    ``params`` lines up with the placeholders in ``sql_fragment``.
+    """
+    clause, params = "", []
+    if start:
+        clause += " AND date >= ?"
+        params.append(start)
+    if end:
+        clause += " AND date <= ?"
+        params.append(end)
+    return clause, params
+
+
 def get_user_by_id(user_id):
     """Return ``{"name", "email", "member_since"}`` for ``user_id`` or ``None``.
 
@@ -38,23 +54,25 @@ def get_user_by_id(user_id):
     return {"name": row["name"], "email": row["email"], "member_since": member_since}
 
 
-def get_summary_stats(user_id):
+def get_summary_stats(user_id, start=None, end=None):
     """Return ``{"total_spent", "transaction_count", "top_category"}`` for the user.
 
-    Empty account -> ``{"total_spent": 0, "transaction_count": 0,
+    ``start`` / ``end`` are optional inclusive ``YYYY-MM-DD`` bounds. Empty
+    account (or empty window) -> ``{"total_spent": 0, "transaction_count": 0,
     "top_category": "—"}``.
     """
+    date_sql, date_params = _date_clause(start, end)
     conn = get_db()
     try:
         totals = conn.execute(
             "SELECT COUNT(*) AS cnt, COALESCE(SUM(amount), 0) AS total "
-            "FROM expenses WHERE user_id = ?",
-            (user_id,),
+            f"FROM expenses WHERE user_id = ?{date_sql}",
+            (user_id, *date_params),
         ).fetchone()
         top = conn.execute(
-            "SELECT category FROM expenses WHERE user_id = ? "
+            f"SELECT category FROM expenses WHERE user_id = ?{date_sql} "
             "GROUP BY category ORDER BY SUM(amount) DESC, category ASC LIMIT 1",
-            (user_id,),
+            (user_id, *date_params),
         ).fetchone()
     finally:
         conn.close()
@@ -70,17 +88,20 @@ def get_summary_stats(user_id):
     }
 
 
-def get_recent_transactions(user_id, limit=10):
+def get_recent_transactions(user_id, limit=10, start=None, end=None):
     """Return the user's ``limit`` most recent expenses, newest first.
 
-    Each item is ``{"date", "description", "category", "amount"}``. No rows -> ``[]``.
+    ``start`` / ``end`` are optional inclusive ``YYYY-MM-DD`` bounds. Each item
+    is ``{"date", "description", "category", "amount"}``. No rows -> ``[]``.
     """
+    date_sql, date_params = _date_clause(start, end)
     conn = get_db()
     try:
         rows = conn.execute(
             "SELECT date, description, category, amount FROM expenses "
-            "WHERE user_id = ? ORDER BY date DESC, id DESC LIMIT ?",
-            (user_id, limit),
+            f"WHERE user_id = ?{date_sql} "
+            "ORDER BY date DESC, id DESC LIMIT ?",
+            (user_id, *date_params, limit),
         ).fetchall()
     finally:
         conn.close()
@@ -88,20 +109,22 @@ def get_recent_transactions(user_id, limit=10):
     return [dict(row) for row in rows]
 
 
-def get_category_breakdown(user_id):
+def get_category_breakdown(user_id, start=None, end=None):
     """Return per-category spend for the user, largest first.
 
-    Each item is ``{"name", "amount", "pct", "width"}`` where ``pct`` values are
-    integers summing to 100 and ``width`` is ``pct`` snapped to the nearest 10
-    (min 10, max 100) for the ``.w-*`` CSS meter classes. No rows -> ``[]``.
+    ``start`` / ``end`` are optional inclusive ``YYYY-MM-DD`` bounds. Each item
+    is ``{"name", "amount", "pct", "width"}`` where ``pct`` values are integers
+    summing to 100 and ``width`` is ``pct`` snapped to the nearest 10 (min 10,
+    max 100) for the ``.w-*`` CSS meter classes. No rows -> ``[]``.
     """
+    date_sql, date_params = _date_clause(start, end)
     conn = get_db()
     try:
         rows = conn.execute(
             "SELECT category AS name, SUM(amount) AS amount FROM expenses "
-            "WHERE user_id = ? GROUP BY category "
-            "ORDER BY SUM(amount) DESC, category ASC",
-            (user_id,),
+            f"WHERE user_id = ?{date_sql} "
+            "GROUP BY category ORDER BY SUM(amount) DESC, category ASC",
+            (user_id, *date_params),
         ).fetchall()
     finally:
         conn.close()

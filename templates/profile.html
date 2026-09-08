@@ -17,6 +17,32 @@
             </div>
         </div>
 
+        <form class="profile-filter" method="get" action="{{ url_for('profile') }}">
+            <div class="profile-filter-fields">
+                <label class="profile-filter-field">
+                    <span>From</span>
+                    <input type="date" name="start" value="{{ filter_start or '' }}" class="form-input">
+                </label>
+                <label class="profile-filter-field">
+                    <span>To</span>
+                    <input type="date" name="end" value="{{ filter_end or '' }}" class="form-input">
+                </label>
+                <button type="submit" class="btn-secondary">Apply</button>
+            </div>
+            <div class="profile-filter-presets">
+                <a href="{{ url_for('profile', range='this_month') }}">This month</a>
+                <a href="{{ url_for('profile', range='last30') }}">Last 30 days</a>
+                <a href="{{ url_for('profile', range='last3m') }}">Last 3 months</a>
+                <a href="{{ url_for('profile', range='last6m') }}">Last 6 months</a>
+                <a href="{{ url_for('profile', range='all') }}">All time</a>
+            </div>
+        </form>
+
+        <p class="profile-filter-label">
+            Showing {{ range_label }}
+            {% if filter_active %}&middot; <a href="{{ url_for('profile') }}">clear</a>{% endif %}
+        </p>
+
         <div class="mock-tiles">
             <div class="mock-tile">
                 <span class="mock-tile-label">Total spent</span>
@@ -32,41 +58,58 @@
             </div>
         </div>
 
-        <div class="mock-panel">
-            <h2 class="profile-panel-title">Recent transactions</h2>
-            <table class="profile-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Description</th>
-                        <th>Category</th>
-                        <th>Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for tx in transactions %}
-                    <tr>
-                        <td>{{ tx.date }}</td>
-                        <td>{{ tx.description }}</td>
-                        <td><span class="cat-badge cat-badge--{{ tx.category|lower }}">{{ tx.category }}</span></td>
-                        <td class="profile-amount">₹{{ "{:,.2f}".format(tx.amount) }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <div class="profile-panels">
 
-        <div class="mock-panel">
-            <h2 class="profile-panel-title">Category breakdown</h2>
-            {% for cat in categories %}
-            <div class="cat-row">
-                <span class="mock-cat">{{ cat.name }}</span>
-                <div class="mock-bar-track">
-                    <div class="cat-meter-fill cat-meter-fill--{{ cat.name|lower }} w-{{ cat.width }}"></div>
-                </div>
-                <span class="profile-amount">₹{{ "{:,.2f}".format(cat.amount) }}</span>
+            <div class="mock-panel">
+                <h2 class="profile-panel-title">Recent transactions</h2>
+                {% if transactions %}
+                <table class="profile-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in transactions %}
+                        <tr>
+                            <td>{{ tx.date }}</td>
+                            <td>{{ tx.description }}</td>
+                            <td><span class="cat-badge cat-badge--{{ tx.category|lower }}">{{ tx.category }}</span></td>
+                            <td class="profile-amount">₹{{ "{:,.2f}".format(tx.amount) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="profile-empty">No transactions in this range.</p>
+                {% endif %}
             </div>
-            {% endfor %}
+
+            <div class="mock-panel">
+                <h2 class="profile-panel-title">Category breakdown</h2>
+                {% if categories %}
+                {% for cat in categories %}
+                <div class="cat-row">
+                    <div class="cat-row-head">
+                        <span class="cat-name">
+                            <span class="cat-dot cat-dot--{{ cat.name|lower }}"></span>{{ cat.name }}
+                            <span class="cat-pct">{{ cat.pct }}%</span>
+                        </span>
+                        <span class="profile-amount">₹{{ "{:,.2f}".format(cat.amount) }}</span>
+                    </div>
+                    <div class="mock-bar-track">
+                        <div class="cat-meter-fill cat-meter-fill--{{ cat.name|lower }} w-{{ cat.width }}"></div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="profile-empty">No spending in this range.</p>
+                {% endif %}
+            </div>
+
         </div>
 
     </div>
